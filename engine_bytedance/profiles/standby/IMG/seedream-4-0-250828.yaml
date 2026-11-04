@@ -1,0 +1,11 @@
+platform: bytedance
+media_type: image
+endpoint: seedream-4-0-250828
+description: Seedream 4.0
+parameters:
+  size: "2K"
+  response_format: "url"
+  seed: -1
+  watermark: false
+prompt_prefix: ""
+prompt_suffix: ""

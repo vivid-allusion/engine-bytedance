@@ -1,0 +1,11 @@
+platform: bytedance
+media_type: image
+endpoint: dola-seedream-5-0-flash-260915
+description: Seedream 5.0 Flash
+parameters:
+  size: "2K"
+  response_format: "url"
+  seed: -1
+  watermark: false
+prompt_prefix: ""
+prompt_suffix: ""

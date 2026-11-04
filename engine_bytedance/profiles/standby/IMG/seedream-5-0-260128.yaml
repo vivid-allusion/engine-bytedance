@@ -1,0 +1,11 @@
+platform: bytedance
+media_type: image
+endpoint: seedream-5-0-260128
+description: Seedream 5.0
+parameters:
+  size: "2K"
+  response_format: "url"
+  seed: -1
+  watermark: false
+prompt_prefix: ""
+prompt_suffix: ""

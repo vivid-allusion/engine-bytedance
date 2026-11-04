@@ -1,0 +1,14 @@
+platform: bytedance
+media_type: video
+endpoint: dreamina-seedance-2-5-260628
+description: Seedance 2.5
+parameters:
+  duration: 5
+  ratio: "adaptive"
+  resolution: "720p"
+  watermark: false
+  generate_audio: false
+prompt_prefix: ""
+prompt_suffix: ""
+image_url_param: image_url
+duration_param_name: duration
