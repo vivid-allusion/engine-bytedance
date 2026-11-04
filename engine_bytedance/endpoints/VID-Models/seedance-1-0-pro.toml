@@ -1,12 +1,12 @@
-id = "dreamina-seedance-1-5-pro"
-label = "Seedance 1.5 Pro"
+id = "seedance-1-0-pro"
+label = "Seedance 1.0 Pro"
 category = "VID"
 platform = "bytedance"
-endpoint = "dreamina-seedance-1-5-pro"
+endpoint = "seedance-1-0-pro"
 api_path = "contents/generations/tasks"
 mode = "async"
 payload_style = "content_array"
-description = "Seedance 1.5 Pro: Seedance on BytePlus ModelArk. The prompt and any reference image ride in a content array; text-only and image-to-video are the same endpoint."
+description = "Seedance 1.0 Pro: Seedance on BytePlus ModelArk. Prompt and any reference image ride in a content array."
 
 [pricing]
 note = "unset — take the price from BytePlus own pricing page before shipping"
@@ -23,7 +23,6 @@ type = "integer"
 default = 5
 min = 2
 max = 12
-note = "Whole seconds; the model page carries the allowed range for each version."
 
 [params.ratio]
 label = "Ratio"

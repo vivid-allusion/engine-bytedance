@@ -1,0 +1,46 @@
+id = "seedance-1-5-pro"
+label = "Seedance 1.5 Pro"
+category = "VID"
+platform = "bytedance"
+endpoint = "seedance-1-5-pro"
+api_path = "contents/generations/tasks"
+mode = "async"
+payload_style = "content_array"
+description = "Seedance 1.5 Pro: Seedance on BytePlus ModelArk. Prompt and any reference image ride in a content array."
+
+[pricing]
+note = "unset — take the price from BytePlus own pricing page before shipping"
+
+[general]
+kind = "video"
+prompt = "required"
+image_url_param = "image_url"
+duration_param_name = "duration"
+
+[params.duration]
+label = "Duration"
+type = "integer"
+default = 5
+min = 2
+max = 12
+
+[params.ratio]
+label = "Ratio"
+type = "select"
+default = "adaptive"
+options = [
+  { value = "adaptive", label = "adaptive" },
+  { value = "16:9", label = "16:9" },
+  { value = "9:16", label = "9:16" },
+  { value = "1:1", label = "1:1" },
+]
+
+[params.resolution]
+label = "Resolution"
+type = "text"
+default = "720p"
+
+[params.watermark]
+label = "Watermark"
+type = "boolean"
+default = false

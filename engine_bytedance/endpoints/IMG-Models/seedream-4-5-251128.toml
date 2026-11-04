@@ -18,7 +18,6 @@ prompt = "required"
 label = "Size"
 type = "text"
 default = "2K"
-note = "Provider-validated. Seedream accepts 1K/2K/4K style values; the model page is the authority."
 
 [params.response_format]
 label = "Response Format"
