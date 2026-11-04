@@ -9,6 +9,7 @@ from engine_bytedance import Engine, EngineError, InputFile  # noqa: E402
 from engine_bytedance.transport import ProviderError  # noqa: E402
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"pixels"
+MP4 = b"\x00\x00\x00\x18ftypmp42" + b"pixels"
 MODEL = "seedream-5-0-260128"
 
 
@@ -89,3 +90,27 @@ def test_a_missing_key_is_a_preflight_error(tmp_path):
         assert "ARK_API_KEY" in str(exc)
     else:
         raise AssertionError("expected EngineError")
+
+def test_video_wraps_prompt_and_image_in_a_content_array(tmp_path, monkeypatch):
+    import engine_bytedance.engine as engine_module
+
+    client = FakeClient([
+        {"id": "task-1"},
+        {"id": "task-1", "status": "running"},
+        {"id": "task-1", "status": "succeeded",
+         "content": {"video_url": "https://cdn.invalid/out.mp4"}},
+    ])
+    monkeypatch.setattr(FakeClient, "download", lambda self, url: MP4, raising=False)
+    engine = make_engine(
+        tmp_path, monkeypatch, client,
+        endpoint="dreamina-seedance-2-5-260628", media_type="video",
+    )
+    item = an_input(tmp_path, prompt="a fox in the snow")
+    item.reference_urls = ["https://cdn.invalid/first.png"]
+    results = engine.run([item])
+    assert [r.status for r in results] == ["ok"]
+    body = client.calls[0]["payload"]
+    assert body["model"] == "dreamina-seedance-2-5-260628"
+    assert {"type": "text", "text": "a fox in the snow"} in body["content"]
+    assert {"type": "image_url", "image_url": {"url": "https://cdn.invalid/first.png"}} in body["content"]
+    assert client.calls[-1]["path"] == "contents/generations/tasks/task-1"

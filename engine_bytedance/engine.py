@@ -191,8 +191,10 @@ class Engine:
             record = tasks.call_sync(request, path, body, emit=self._emit, prefix=prefix)
             return tasks.assets_from(record)
 
-        # BytePlus takes JSON here, not a form.
-        body = {"model": spec.model, **payload}
+        # BytePlus posts JSON here, and video takes a content[] array rather than
+        # a flat prompt: text and media are items in that array, and scalar
+        # settings ride beside it.
+        body = self._video_body(spec, payload)
         job = tasks.submit_video(request, path, body, emit=self._emit, prefix=prefix)
         record = tasks.await_video(
             request,
@@ -209,6 +211,31 @@ class Engine:
             assets = [{"bytes": self._client().request_bytes("GET", spec.content_path.format(id=job_id))}]
         return assets
 
+    def _video_body(self, spec: EndpointSpec, payload: dict) -> dict:
+        """ModelArk video body: a content array, scalars beside it."""
+        if spec.payload_style != "content_array":
+            return {"model": spec.model, **payload}
+
+        content: list[dict] = []
+        prompt = str(payload.get("prompt") or "")
+        if prompt:
+            content.append({"type": "text", "text": prompt})
+        for key in (spec.image_url_param, *spec.slots):
+            value = payload.get(key)
+            if not value:
+                continue
+            urls = value if isinstance(value, list) else [value]
+            content.extend(
+                {"type": "image_url", "image_url": {"url": str(url)}} for url in urls
+            )
+        body: dict = {"model": spec.model, "content": content}
+        for key, value in payload.items():
+            if key in ("prompt", spec.image_url_param, *spec.slots):
+                continue
+            if value not in (None, ""):
+                body[key] = value
+        return body
+
     def _make_request(self, prefix: str) -> Callable[..., dict]:
         """A retrying JSON request bound to this batch's retry policy."""
 
@@ -217,7 +244,8 @@ class Engine:
             self._emit(f"{prefix} ⏳ {label}, retry {attempt}/{total} in {sleep:.1f}s")
 
         def request(method: str, path: str, payload: dict | None = None, *,
-                    headers: dict[str, str] | None = None) -> dict:
+                    headers: dict[str, str] | None = None,
+                    files: dict | None = None) -> dict:
             return transport.request_with_retry(
                 self._client(), method, path, payload, headers=headers,
                 retries=int(self._profile.get("retry_on_429", 4)),

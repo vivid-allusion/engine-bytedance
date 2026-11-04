@@ -88,6 +88,7 @@ class EndpointSpec:
     label: str = ""
     description: str = ""
     api_path: str = ""
+    payload_style: str = "flat"
     mode: str = "sync"
     content_path: str = ""
     image_url_param: str = ""
@@ -247,6 +248,7 @@ def _read_spec(path: Path, category: str) -> EndpointSpec | None:
         label=str(data.get("label") or data["id"]),
         description=str(data.get("description") or ""),
         api_path=str(data.get("api_path") or ""),
+        payload_style=str(data.get("payload_style") or "flat"),
         mode=str(data.get("mode") or "sync"),
         content_path=str(general.get("content_path") or data.get("content_path") or ""),
         image_url_param=str(general.get("image_url_param") or ""),
