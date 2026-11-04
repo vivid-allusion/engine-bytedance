@@ -1,0 +1,40 @@
+id = "seedream-5-0-260128"
+label = "Seedream 5.0"
+category = "IMG"
+platform = "bytedance"
+endpoint = "seedream-5-0-260128"
+api_path = "images/generations"
+mode = "sync"
+description = "Seedream 5.0: Seedream image generation on BytePlus ModelArk."
+
+[pricing]
+note = "unset — take the price from BytePlus own pricing page before shipping"
+
+[general]
+kind = "image"
+prompt = "required"
+
+[params.size]
+label = "Size"
+type = "text"
+default = "2K"
+note = "Provider-validated. Seedream accepts 1K/2K/4K style values; the model page is the authority."
+
+[params.response_format]
+label = "Response Format"
+type = "select"
+default = "url"
+options = [
+  { value = "url", label = "url" },
+  { value = "b64_json", label = "b64_json" },
+]
+
+[params.seed]
+label = "Seed"
+type = "integer"
+default = -1
+
+[params.watermark]
+label = "Watermark"
+type = "boolean"
+default = false
