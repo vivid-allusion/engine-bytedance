@@ -1,0 +1,39 @@
+id = "dola-seedream-5-0-pro-260628"
+label = "Seedream 5.0 Pro"
+category = "IMG"
+platform = "bytedance"
+endpoint = "dola-seedream-5-0-pro-260628"
+api_path = "images/generations"
+mode = "sync"
+description = "Seedream 5.0 Pro: Seedream image generation on BytePlus ModelArk."
+
+[pricing]
+note = "unset — take the price from BytePlus own pricing page before shipping"
+
+[general]
+kind = "image"
+prompt = "required"
+
+[params.size]
+label = "Size"
+type = "text"
+default = "2K"
+
+[params.response_format]
+label = "Response Format"
+type = "select"
+default = "url"
+options = [
+  { value = "url", label = "url" },
+  { value = "b64_json", label = "b64_json" },
+]
+
+[params.seed]
+label = "Seed"
+type = "integer"
+default = -1
+
+[params.watermark]
+label = "Watermark"
+type = "boolean"
+default = false

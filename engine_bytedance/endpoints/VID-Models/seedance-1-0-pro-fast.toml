@@ -44,3 +44,9 @@ default = "720p"
 label = "Watermark"
 type = "boolean"
 default = false
+
+[params.generate_audio]
+label = "Generate Audio"
+type = "boolean"
+default = false
+note = "Off by default: a generated soundtrack can trip the provider's copyright filter and fail the whole job."

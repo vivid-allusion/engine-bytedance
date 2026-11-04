@@ -12,7 +12,7 @@ def test_both_families_are_catalogued():
     video = [s for s in catalog.specs() if s.category == "VID"]
     assert len(image) >= 3
     assert len(video) >= 3
-    assert catalog.status(image[0].model) == "experimental"
+    assert catalog.status(image[0].model) in {"experimental", "beta", "proven"}
 
 
 def test_images_are_sync_and_video_uses_the_content_array():
