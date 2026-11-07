@@ -3,9 +3,18 @@ media_type: image
 endpoint: seedream-4-5-251128
 description: Seedream 4.5
 parameters:
-  size: "2K"
+  # size:
+  #   "2048x2048" (square)
+  #   portrait: "1728x2304" (3:4) | "1600x2848" (9:16)
+  #   landscape: "2304x1728" (4:3) | "2848x1600" (16:9)
+  #   "WIDTHxHEIGHT" — total pixels 3,686,400-16,777,216,
+  #                    ratio 1/16 to 16
+  size: "2048x2048"
+  # response_format: "url" | "b64_json"
   response_format: "url"
+  # seed: -1 (random) | 0 to 2147483647 (fixed)
   seed: -1
+  # watermark: true | false (default true)
   watermark: false
 prompt_prefix: ""
 prompt_suffix: ""

@@ -3,9 +3,15 @@ media_type: image
 endpoint: seedream-3-0
 description: Seedream 3.0
 parameters:
-  size: "2K"
+  # size:
+  #   "1024x1024" (provider default) | "2048x2048" (maximum square)
+  #   portrait or landscape: any "WIDTHxHEIGHT" from 512x512 to 2048x2048
+  size: "2048x2048"
+  # response_format: "url" | "b64_json"
   response_format: "url"
+  # seed: -1 (random) | 0 to 2147483647 (fixed)
   seed: -1
+  # watermark: true | false (default true)
   watermark: false
 prompt_prefix: ""
 prompt_suffix: ""

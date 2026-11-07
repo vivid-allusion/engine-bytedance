@@ -3,9 +3,18 @@ media_type: image
 endpoint: dola-seedream-5-0-flash-260915
 description: Seedream 5.0 Flash
 parameters:
-  size: "2K"
+  # size:
+  #   "2048x2048" (square)
+  #   portrait: "1776x2368" (3:4) | "1584x2816" (9:16)
+  #   landscape: "2368x1776" (4:3) | "2816x1584" (16:9)
+  #   "WIDTHxHEIGHT" — total pixels 921,600-4,624,220,
+  #                    ratio 1/16 to 16
+  size: "2048x2048"
+  # response_format: "url" | "b64_json"
   response_format: "url"
+  # seed: -1 (random) | 0 to 2147483647 (fixed)
   seed: -1
+  # watermark: true | false (default true)
   watermark: false
 prompt_prefix: ""
 prompt_suffix: ""
