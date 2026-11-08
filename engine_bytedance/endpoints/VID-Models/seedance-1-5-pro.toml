@@ -13,6 +13,7 @@ note = "unset — take the price from BytePlus own pricing page before shipping"
 
 [general]
 kind = "video"
+draft_mode = true
 prompt = "required"
 image_url_param = "image_url"
 duration_param_name = "duration"

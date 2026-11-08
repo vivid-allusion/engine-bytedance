@@ -97,6 +97,7 @@ class EndpointSpec:
     media_lists: tuple[str, ...] = ()
     duration_param_name: str = "duration_seconds"
     prompt_mode: str = "required"
+    draft_mode: bool = False
     known: bool = True
     params: dict = field(default_factory=dict)
     status: str = "experimental"
@@ -257,5 +258,6 @@ def _read_spec(path: Path, category: str) -> EndpointSpec | None:
         media_lists=tuple(str(s) for s in general.get("media_lists") or ()),
         duration_param_name=str(general.get("duration_param_name") or "duration_seconds"),
         prompt_mode=str(general.get("prompt") or "required"),
+        draft_mode=bool(general.get("draft_mode", False)),
         params=params,
     )

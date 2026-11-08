@@ -16,14 +16,15 @@ import os
 import threading
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from . import outputs, tasks, transport
 from .catalog import Catalog, EndpointSpec, load_catalog
 from .datatypes import EngineError, InputFile, OutputFile, ProgressEvent
-from .payloads import build_input, compose_prompt
+from .payloads import build_input, compose_prompt, encode_param, is_unset
+from .payloads import _to_bool
 
 DEFAULT_POLL_INTERVAL = 2.0
 DEFAULT_TASK_TIMEOUT = 3600.0
@@ -32,6 +33,8 @@ IMAGES_PATH = "images/generations"
 VIDEO_SUBMIT_PATH = "contents/generations/tasks"
 VIDEO_STATUS_PATH = "contents/generations/tasks/{id}"
 VIDEO_CONTENT_PATH = ""
+# Drafts made from 2026-10-28 10:00 UTC+8 last 14 days; earlier ones 7.
+DRAFT_14_DAYS_FROM = int(datetime(2026, 10, 28, 2, tzinfo=timezone.utc).timestamp())
 
 
 class Engine:
@@ -106,8 +109,10 @@ class Engine:
         if index > 0 and delay > 0:
             time.sleep(delay)
 
+        finish_id = str(item.metadata.get("draft_task_id") or "")
+        draft = _to_bool(params.pop("draft", False)) is True and not finish_id
         prompt = compose_prompt(self._profile, item)
-        if spec.prompt_required and not prompt:
+        if spec.prompt_required and not prompt and not finish_id:
             self._emit(f"{prefix} Empty prompt after applying prefix/suffix", level="error")
             return [self._error(item, expected, media_type, "Empty prompt after applying prefix/suffix")]
 
@@ -116,11 +121,22 @@ class Engine:
 
         api_payload: dict | None = None
         try:
-            api_payload, warnings = build_input(self._profile, spec, params, prompt, item)
+            if draft and not spec.draft_mode:
+                raise EngineError(f"{spec.model} has no draft mode")
+            if finish_id:
+                # BytePlus refuses any setting repeated from the draft.
+                api_payload = {"draft_task_id": finish_id, "resolution": "1080p"}
+                if not is_unset(params.get("watermark")):
+                    api_payload["watermark"] = encode_param("watermark", params["watermark"], spec)
+                warnings = []
+            else:
+                api_payload, warnings = build_input(self._profile, spec, params, prompt, item)
+            if draft:
+                api_payload.update(draft=True, resolution="480p")
             for warning in warnings:
                 self._emit(f"{prefix} ⚠️  {warning}", level="warning")
 
-            assets = self._dispatch(api_payload, prefix, spec)
+            assets, record = self._dispatch(api_payload, prefix, spec)
             self._emit(f"{prefix} 📦 Payload: {api_payload}")
             saved = self._save_results(assets, media_type, stem, index, prefix, current, total, rel_dir)
             if not saved:
@@ -134,13 +150,21 @@ class Engine:
                     )
                 ]
             self._reset_breaker()
+            metadata = {"api_payload": api_payload}
+            if draft:
+                made = int(record.get("created_at") or 0)
+                days = 14 if made >= DRAFT_14_DAYS_FROM else 7
+                metadata["draft_task"] = {"id": str(record.get("id") or ""), "created_at": made,
+                                          "expires_at": made + days * 86400}
+            if finish_id:
+                metadata["finished_from"] = finish_id
             return [
                 OutputFile(
                     source_path=item.path,
                     path=saved_path,
                     status="ok",
                     media_type=media_type,
-                    metadata={"api_payload": api_payload},
+                    metadata=dict(metadata),
                 )
                 for saved_path in saved
             ]
@@ -181,7 +205,7 @@ class Engine:
 
     # ── provider calls ────────────────────────────────────────────────────
 
-    def _dispatch(self, payload: dict, prefix: str, spec: EndpointSpec) -> list[dict]:
+    def _dispatch(self, payload: dict, prefix: str, spec: EndpointSpec) -> tuple[list[dict], dict]:
         """Return the assets, whichever shape the endpoint uses."""
         request = self._make_request(prefix)
         path = spec.api_path or (VIDEO_SUBMIT_PATH if spec.kind == "video" else IMAGES_PATH)
@@ -189,7 +213,7 @@ class Engine:
         if spec.mode == "sync":
             body = {"model": spec.model, **payload}
             record = tasks.call_sync(request, path, body, emit=self._emit, prefix=prefix)
-            return tasks.assets_from(record)
+            return tasks.assets_from(record), record
 
         # BytePlus posts JSON here, and video takes a content[] array rather than
         # a flat prompt: text and media are items in that array, and scalar
@@ -209,7 +233,7 @@ class Engine:
         if not assets and spec.content_path:
             job_id = str(record.get("id") or job.get("id") or "")
             assets = [{"bytes": self._client().request_bytes("GET", spec.content_path.format(id=job_id))}]
-        return assets
+        return assets, record
 
     def _video_body(self, spec: EndpointSpec, payload: dict) -> dict:
         """ModelArk video body: a content array, scalars beside it."""
@@ -217,6 +241,8 @@ class Engine:
             return {"model": spec.model, **payload}
 
         content: list[dict] = []
+        if payload.get("draft_task_id"):
+            content.append({"type": "draft_task", "draft_task": {"id": payload["draft_task_id"]}})
         prompt = str(payload.get("prompt") or "")
         if prompt:
             content.append({"type": "text", "text": prompt})
@@ -230,7 +256,7 @@ class Engine:
             )
         body: dict = {"model": spec.model, "content": content}
         for key, value in payload.items():
-            if key in ("prompt", spec.image_url_param, *spec.slots):
+            if key in ("prompt", "draft_task_id", spec.image_url_param, *spec.slots):
                 continue
             if value not in (None, ""):
                 body[key] = value
