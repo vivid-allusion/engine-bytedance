@@ -31,3 +31,10 @@ def test_the_key_environment_variable_is_ark():
     from engine_bytedance import metadata
 
     assert metadata.API_KEY_ENV_VAR == "ARK_API_KEY"
+
+
+def test_seedance_2_5_offers_4k_as_a_resolution():
+    resolution = load_catalog().get("dreamina-seedance-2-5-260628").params["resolution"]
+    assert resolution["type"] == "select"
+    values = [option["value"] for option in resolution["options"]]
+    assert values == ["480p", "720p", "1080p", "4k"]

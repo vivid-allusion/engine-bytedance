@@ -65,3 +65,20 @@ def test_finish_sends_only_the_ticket(tmp_path, monkeypatch):
         "model": V25, "content": [{"type": "draft_task", "draft_task": {"id": "cgt-1"}}],
         "resolution": "1080p", "watermark": True}
     assert out.metadata["finished_from"] == "cgt-1"
+
+
+def test_a_draft_can_finish_at_4k(tmp_path, monkeypatch):
+    client = FakeClient(done("cgt-4", 1794060000))
+    monkeypatch.setattr(FakeClient, "download", lambda self, url: MP4)
+    item = shot(tmp_path, prompt="", draft_task_id="cgt-1")
+    run(tmp_path, monkeypatch, client, V25, item, resolution="4k")
+    assert client.calls[0]["payload"]["resolution"] == "4k"
+
+
+def test_every_other_finish_resolution_is_1080p(tmp_path, monkeypatch):
+    for asked in ("720p", "480p", "1080p", ""):
+        client = FakeClient(done("cgt-5", 1794060000))
+        monkeypatch.setattr(FakeClient, "download", lambda self, url: MP4)
+        item = shot(tmp_path, prompt="", draft_task_id="cgt-1")
+        run(tmp_path, monkeypatch, client, V25, item, resolution=asked)
+        assert client.calls[0]["payload"]["resolution"] == "1080p"

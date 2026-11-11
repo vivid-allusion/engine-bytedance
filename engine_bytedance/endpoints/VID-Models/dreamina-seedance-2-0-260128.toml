@@ -37,8 +37,15 @@ options = [
 
 [params.resolution]
 label = "Resolution"
-type = "text"
+type = "select"
 default = "720p"
+options = [
+  { value = "480p", label = "480p" },
+  { value = "720p", label = "720p" },
+  { value = "1080p", label = "1080p" },
+  { value = "4k", label = "4k (10-bit)" },
+]
+note = "4k is documented for Seedance 2.0: 3840x2160 at 16:9, 10-bit, H.265/HEVC encoding."
 
 [params.watermark]
 label = "Watermark"

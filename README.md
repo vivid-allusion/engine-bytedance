@@ -2,14 +2,38 @@
 
 Engine wrapper for **BytePlus ModelArk** — ByteDance's Seedream image models.
 
-**6 endpoints, from BytePlus's own documentation (captured 2026-11-04):**
-3 image and 3 video.
-Images: `seedream-5-0-260128`, `seedream-4-5-251128`, `seedream-4-0-250828`.
+**14 endpoints, from BytePlus's own documentation (captured 2026-11-04 and
+2026-11-07):** 6 image and 8 video.
+
+Images: `dola-seedream-5-0-pro-260628`, `dola-seedream-5-0-flash-260915`,
+`seedream-5-0-260128`, `seedream-4-5-251128`, `seedream-4-0-250828`,
+`seedream-3-0`.
+
 Video: `dreamina-seedance-2-5-260628`, `dreamina-seedance-2-0-260128`,
-`dreamina-seedance-1-5-pro`. Dated model
+`dreamina-seedance-2-0-fast-260128`, `dreamina-seedance-2-0-mini-260615`,
+`seedance-1-5-pro`, `seedance-1-0-pro`, `seedance-1-0-pro-fast`,
+`seedance-1-0-lite`. Dated model
 ids on purpose: an alias that moves under the user is a catalogue that lies.
 
 Every endpoint is `experimental` until a real call proves it.
+
+## Resolutions and 4k
+
+`resolution` is a select on the video entries, so the wizard offers only values
+the catalogue knows about.
+
+- **Seedance 2.0** takes `4k` (3840×2160 at 16:9, 10-bit, H.265/HEVC) on any
+  activated account. BytePlus documents it.
+- **Seedance 2.5** takes `4k` only on the whitelist-only Premium model
+  (`dreamina-seedance-2-5-premium-260915`). The public reference stops at
+  1080p, and an account outside that program gets the request rejected — the
+  parameter note says so, so the option is never mistaken for a promise.
+- **Drafts** preview at 480p; finishing a draft sends `4k` when the profile asks
+  for it and `1080p` otherwise, which is the only value BytePlus accepts from a
+  non-Premium account.
+
+The quotes behind every claim are in
+`engine-bytedance-docs/_sources/2026-11-11/seedance-resolutions.md`.
 
 ## Setup
 

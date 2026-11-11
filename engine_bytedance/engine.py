@@ -124,8 +124,11 @@ class Engine:
             if draft and not spec.draft_mode:
                 raise EngineError(f"{spec.model} has no draft mode")
             if finish_id:
-                # BytePlus refuses any setting repeated from the draft.
-                api_payload = {"draft_task_id": finish_id, "resolution": "1080p"}
+                # BytePlus refuses any setting repeated from the draft. A public
+                # 2.5 draft finishes at 1080p only; 4k is the whitelist-only
+                # Premium exception, and every other value falls back to 1080p.
+                finish_resolution = "4k" if str(params.get("resolution") or "").lower() == "4k" else "1080p"
+                api_payload = {"draft_task_id": finish_id, "resolution": finish_resolution}
                 if not is_unset(params.get("watermark")):
                     api_payload["watermark"] = encode_param("watermark", params["watermark"], spec)
                 warnings = []
