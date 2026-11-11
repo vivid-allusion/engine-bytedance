@@ -85,7 +85,23 @@ def build_input(
 
     _add_media(payload, profile, spec, item)
     _add_duration(payload, profile, spec, item, warnings)
+    for key, value in payload.items():
+        _check_also(key, value, spec.params.get(key))
     return payload, warnings
+
+
+def _check_also(key: str, value: Any, param: Any) -> None:
+    """Refuse an out-of-range whole number where the entry lists extra values (``also``)."""
+    if not isinstance(param, dict) or "also" not in param:
+        return
+    if isinstance(value, int) and not isinstance(value, bool) and (
+        value in param["also"] or param["min"] <= value <= param["max"]
+    ):
+        return
+    raise EngineError(
+        f"'{key}' must be a whole number from {param['min']} to {param['max']}"
+        f" or one of {param['also']}, not {value!r}"
+    )
 
 
 def is_unset(value: Any) -> bool:

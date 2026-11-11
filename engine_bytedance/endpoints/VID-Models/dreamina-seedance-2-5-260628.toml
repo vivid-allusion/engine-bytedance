@@ -24,8 +24,10 @@ duration_param_name = "duration"
 label = "Duration"
 type = "integer"
 default = 5
-min = 2
-max = 12
+min = 4
+max = 30
+also = [-1]
+note = "-1 lets the model pick the length."
 
 [params.ratio]
 label = "Ratio"
