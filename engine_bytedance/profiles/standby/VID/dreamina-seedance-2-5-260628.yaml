@@ -2,6 +2,9 @@ platform: bytedance
 media_type: video
 endpoint: dreamina-seedance-2-5-260628
 description: Seedance 2.5
+pricing:
+  currency: USD
+  cost_per_second: 0.231
 parameters:
   duration: 5
   ratio: "adaptive"
