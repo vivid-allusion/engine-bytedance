@@ -32,26 +32,17 @@ def run_batch(engine, inputs: list[InputFile]) -> list[OutputFile]:
 
     def work(index: int, item: InputFile) -> None:
         if stop.is_set():
-            results[index] = [
-                OutputFile(
-                    source_path=item.path,
-                    status="error",
-                    error_msg="Skipped: the batch stopped after an unrecoverable error",
-                    media_type=engine._media_type(),
-                )
-            ]
+            results[index] = [engine._error(
+                item, None, engine._media_type(),
+                "Skipped: the batch stopped after an unrecoverable error",
+                index=index, total=len(inputs), stage="skipped")]
             return
         try:
             results[index] = engine._run_one(index, len(inputs), item, stop)
         except Exception as exc:  # noqa: BLE001 - a worker must never vanish
-            results[index] = [
-                OutputFile(
-                    source_path=item.path,
-                    status="error",
-                    error_msg=str(exc),
-                    media_type=engine._media_type(),
-                )
-            ]
+            results[index] = [engine._error(
+                item, None, engine._media_type(), str(exc),
+                index=index, total=len(inputs), stage="unexpected error", error=exc)]
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [pool.submit(work, index, item) for index, item in enumerate(inputs)]

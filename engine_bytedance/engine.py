@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import outputs, tasks, transport
+from . import errorlog, outputs, tasks, transport
 from .catalog import Catalog, EndpointSpec, load_catalog
 from .datatypes import EngineError, InputFile, OutputFile, ProgressEvent
 from .payloads import build_input, compose_prompt, encode_param, is_unset
@@ -114,12 +114,14 @@ class Engine:
         prompt = compose_prompt(self._profile, item)
         if spec.prompt_required and not prompt and not finish_id:
             self._emit(f"{prefix} Empty prompt after applying prefix/suffix", level="error")
-            return [self._error(item, expected, media_type, "Empty prompt after applying prefix/suffix")]
+            return [self._error(item, expected, media_type, "Empty prompt after applying prefix/suffix",
+                                index=index, total=total, stage="empty prompt")]
 
         self._emit(f"{prefix} 📡 Calling {self.PROVIDER_NAME} ({spec.model})...")
         self._emit(f"{prefix} 📝 Markdown: {item.path.name}")
 
         api_payload: dict | None = None
+        task_id = ""
         try:
             if draft and not spec.draft_mode:
                 raise EngineError(f"{spec.model} has no draft mode")
@@ -140,6 +142,7 @@ class Engine:
                 self._emit(f"{prefix} ⚠️  {warning}", level="warning")
 
             assets, record = self._dispatch(api_payload, prefix, spec)
+            task_id = str(record.get("id") or "")
             self._emit(f"{prefix} 📦 Payload: {api_payload}")
             saved = self._save_results(assets, media_type, stem, index, prefix, current, total, rel_dir)
             if not saved:
@@ -149,7 +152,8 @@ class Engine:
                         expected,
                         media_type,
                         f"No output returned from {self.PROVIDER_NAME}",
-                        api_payload=api_payload,
+                        api_payload=api_payload, index=index, total=total, stage="no output",
+                        task_id=task_id,
                     )
                 ]
             self._reset_breaker()
@@ -175,12 +179,16 @@ class Engine:
         except EngineError as exc:
             self._emit(f"{prefix} Error: {exc}", level="error", current=current,
                        total=total, api_payload=api_payload)
-            return [self._error(item, expected, media_type, str(exc), api_payload=api_payload)]
+            return [self._error(item, expected, media_type, str(exc), api_payload=api_payload,
+                                index=index, total=total, stage=_stage(exc, task_id), error=exc,
+                                task_id=task_id or getattr(exc, "task_id", ""))]
 
         except Exception as exc:  # noqa: BLE001 - classified, then reported per file
             self._emit(f"{prefix} Error: {exc}", level="error", current=current,
                        total=total, api_payload=api_payload)
-            output = self._error(item, expected, media_type, str(exc), api_payload=api_payload)
+            output = self._error(item, expected, media_type, str(exc), api_payload=api_payload,
+                                 index=index, total=total, stage=_stage(exc, task_id), error=exc,
+                                 task_id=task_id or getattr(exc, "task_id", ""))
             if transport.is_batch_fatal(exc):
                 self._emit(
                     f"{prefix} 🛑 Fatal provider error — aborting batch. "
@@ -223,15 +231,19 @@ class Engine:
         # settings ride beside it.
         body = self._video_body(spec, payload)
         job = tasks.submit_video(request, path, body, emit=self._emit, prefix=prefix)
-        record = tasks.await_video(
-            request,
-            job,
-            status_path=VIDEO_STATUS_PATH,
-            poll_interval=self._poll_interval,
-            timeout=self._task_timeout,
-            emit=self._emit,
-            prefix=prefix,
-        )
+        try:
+            record = tasks.await_video(
+                request,
+                job,
+                status_path=VIDEO_STATUS_PATH,
+                poll_interval=self._poll_interval,
+                timeout=self._task_timeout,
+                emit=self._emit,
+                prefix=prefix,
+            )
+        except Exception as exc:
+            exc.task_id = str(job.get("id") or "")  # the error log names the job BytePlus ran
+            raise
         assets = tasks.assets_from(record)
         if not assets and spec.content_path:
             job_id = str(record.get("id") or job.get("id") or "")
@@ -310,9 +322,18 @@ class Engine:
             decode=base64.b64decode,
         )
 
-    def _error(self, item: InputFile, expected: Path, media_type: str, message: str,
-               api_payload: dict | None = None) -> OutputFile:
+    def _error(self, item: InputFile, expected: Path | None, media_type: str, message: str,
+               api_payload: dict | None = None, *, index: int, total: int, stage: str,
+               task_id: str = "", error: BaseException | None = None) -> OutputFile:
         metadata = {"api_payload": api_payload} if api_payload else {}
+        rel_dir = str(item.metadata.get("relative_dir", "") or "")
+        log = errorlog.write_error_log(
+            dest_dir=self._output_dir / rel_dir if rel_dir else self._output_dir, item=item,
+            index=index, current=index + 1, total=total, profile=self._profile,
+            api_key=self._resolve_api_key(), expected=expected, stage=stage, error_msg=message,
+            payload=api_payload, error=error, task_id=task_id)
+        if log:
+            metadata["error_log"] = str(log)
         return OutputFile(source_path=item.path, status="error", error_msg=message,
                           media_type=media_type, expected_path=expected, metadata=metadata)
 
@@ -370,6 +391,12 @@ class Engine:
             self._on_progress(ProgressEvent(message=message, level=level, current=current,
                                             total=total, saved_path=saved_path,
                                             api_payload=api_payload))
+
+
+def _stage(exc: Exception, task_id: str) -> str:
+    if getattr(exc, "task_id", ""):
+        return "task ended or timed out"
+    return "saving the output" if task_id else "creating the task"
 
 
 def _positive_float(value: Any, default: float) -> float:
