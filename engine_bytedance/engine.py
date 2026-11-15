@@ -146,16 +146,10 @@ class Engine:
             self._emit(f"{prefix} 📦 Payload: {api_payload}")
             saved = self._save_results(assets, media_type, stem, index, prefix, current, total, rel_dir)
             if not saved:
-                return [
-                    self._error(
-                        item,
-                        expected,
-                        media_type,
-                        f"No output returned from {self.PROVIDER_NAME}",
-                        api_payload=api_payload, index=index, total=total, stage="no output",
-                        task_id=task_id,
-                    )
-                ]
+                return [self._error(item, expected, media_type,
+                                    f"No output returned from {self.PROVIDER_NAME}",
+                                    api_payload=api_payload, index=index, total=total,
+                                    stage="no output", task_id=task_id)]
             self._reset_breaker()
             metadata = {"api_payload": api_payload}
             if draft:
@@ -180,15 +174,13 @@ class Engine:
             self._emit(f"{prefix} Error: {exc}", level="error", current=current,
                        total=total, api_payload=api_payload)
             return [self._error(item, expected, media_type, str(exc), api_payload=api_payload,
-                                index=index, total=total, stage=_stage(exc, task_id), error=exc,
-                                task_id=task_id or getattr(exc, "task_id", ""))]
+                                index=index, total=total, error=exc, task_id=task_id)]
 
         except Exception as exc:  # noqa: BLE001 - classified, then reported per file
             self._emit(f"{prefix} Error: {exc}", level="error", current=current,
                        total=total, api_payload=api_payload)
             output = self._error(item, expected, media_type, str(exc), api_payload=api_payload,
-                                 index=index, total=total, stage=_stage(exc, task_id), error=exc,
-                                 task_id=task_id or getattr(exc, "task_id", ""))
+                                 index=index, total=total, error=exc, task_id=task_id)
             if transport.is_batch_fatal(exc):
                 self._emit(
                     f"{prefix} 🛑 Fatal provider error — aborting batch. "
@@ -323,17 +315,12 @@ class Engine:
         )
 
     def _error(self, item: InputFile, expected: Path | None, media_type: str, message: str,
-               api_payload: dict | None = None, *, index: int, total: int, stage: str,
+               api_payload: dict | None = None, *, index: int, total: int, stage: str = "",
                task_id: str = "", error: BaseException | None = None) -> OutputFile:
         metadata = {"api_payload": api_payload} if api_payload else {}
-        rel_dir = str(item.metadata.get("relative_dir", "") or "")
-        log = errorlog.write_error_log(
-            dest_dir=self._output_dir / rel_dir if rel_dir else self._output_dir, item=item,
-            index=index, current=index + 1, total=total, profile=self._profile,
-            api_key=self._resolve_api_key(), expected=expected, stage=stage, error_msg=message,
-            payload=api_payload, error=error, task_id=task_id)
-        if log:
-            metadata["error_log"] = str(log)
+        errorlog.attach(metadata, output_dir=self._output_dir, item=item, index=index, total=total,
+                        profile=self._profile, api_key=self._resolve_api_key(), expected=expected,
+                        stage=stage, error_msg=message, payload=api_payload, error=error, task_id=task_id)
         return OutputFile(source_path=item.path, status="error", error_msg=message,
                           media_type=media_type, expected_path=expected, metadata=metadata)
 
@@ -391,12 +378,6 @@ class Engine:
             self._on_progress(ProgressEvent(message=message, level=level, current=current,
                                             total=total, saved_path=saved_path,
                                             api_payload=api_payload))
-
-
-def _stage(exc: Exception, task_id: str) -> str:
-    if getattr(exc, "task_id", ""):
-        return "task ended or timed out"
-    return "saving the output" if task_id else "creating the task"
 
 
 def _positive_float(value: Any, default: float) -> float:

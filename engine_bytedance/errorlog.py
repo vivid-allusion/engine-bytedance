@@ -59,3 +59,18 @@ def write_error_log(
         return path
     except Exception:  # noqa: BLE001 - a log that cannot be written must not hide the failure
         return None
+
+
+def attach(metadata: dict, *, output_dir: Path, item: InputFile, index: int, total: int,
+           stage: str = "", error: BaseException | None = None, task_id: str = "", **fields) -> None:
+    """Write the log beside the would-be output and name it in ``metadata["error_log"]``."""
+    task_id = task_id or getattr(error, "task_id", "")
+    if not stage:
+        stage = ("task ended or timed out" if getattr(error, "task_id", "")
+                 else "saving the output" if task_id else "creating the task")
+    rel_dir = str(item.metadata.get("relative_dir", "") or "")
+    log = write_error_log(dest_dir=output_dir / rel_dir if rel_dir else output_dir, item=item,
+                          index=index, current=index + 1, total=total, stage=stage, error=error,
+                          task_id=task_id, **fields)
+    if log:
+        metadata["error_log"] = str(log)
