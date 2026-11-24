@@ -1,40 +1,32 @@
-# AGENTS.md — engine-template
+# AGENTS.md — engine-bytedance
 
-Rules for anyone changing the skeleton, and for anyone starting an engine from
-it.
+Notes for anyone changing this Engine: the Helmer Engine for BytePlus ModelArk
+(Seedream images, Seedance video). The key is `ARK_API_KEY`. The Engine
+contract lives in helmer-transceiver at `docs/architecture/ENGINE_CONTRACT.md`.
 
-## The property to protect
+## Shape
 
-**The template is green out of the box.** Its own tests pass and the shared
-conformance suite passes against the built-in `template/*` models. A stranger's
-first run must be green before they change anything, so any red afterwards is
-their change.
-
-Breaking that property is the one change that is always a bug: it turns the
-starting point into a puzzle.
+- Images are one synchronous `POST /images/generations`; the answer is inline.
+- Video is `POST /contents/generations/tasks` with a `content[]` array, then
+  polled to a terminal state. The catalogue marks it with
+  `payload_style = "content_array"`.
 
 ## Rules
 
-1. **The catalogue is data.** Adding a model is a TOML file, never a branch in
-   `engine.py`. If a provider needs a third code path, that is a design
-   conversation, not a patch.
+1. **The catalogue is data.** One TOML per model under
+   `engine_bytedance/endpoints/IMG-Models` and
+   `engine_bytedance/endpoints/VID-Models`. Adding a model is a TOML file,
+   never a branch in `engine_bytedance/engine.py`.
 2. **`engine.py` holds no wire knowledge.** URLs, envelopes and terminal states
-   live in `transport.py` and `tasks.py`. `engine.py` is the loop.
-3. **Never invent a model, a parameter or a price.** Every catalogue entry
-   comes from the provider's own document or page, and `new_engine.py` refuses
-   to guess rather than defaulting.
-4. **Fail loud.** A success with no file, an undeclared parameter sent, media
-   on a model that takes none, a job that never finishes — each is an error
-   with a message, never a shrug.
-5. **The scope holds.** Four generation categories — `IMG`, `VID`, `LLM`,
-   `AUD` — and only the ones a Generator consumes (SCOPE.md). A model is
-   carried where it belongs by what it produces; a retired folder is a defect.
-6. **A new rule in the shared suite arrives as a version bump**, never as a
-   silent change under an existing tag.
+   live in `engine_bytedance/transport.py` and `engine_bytedance/tasks.py`.
+3. **Never invent a model, a parameter or a price.** Each comes from
+   BytePlus's own docs. Model ids are dated on purpose: an alias that moves
+   under the user is a catalogue that lies.
+4. **Fail loud.** A success with no file, an undeclared parameter sent, a job
+   that never finishes — each is an error with a message, never a shrug.
 
-## When the skeleton changes
+## Tests
 
-The frozen fixture inside `engine-conformance` is a copy of this package. A
-change here that should reach the suite is refreshed there deliberately, in
-its own commit, with the mutant list re-run — never by a script that copies
-quietly.
+```
+pip install -r requirements.txt -r requirements-dev.txt && python -m pytest -q
+```
